@@ -42,7 +42,10 @@ NO_THINK_SEATS = frozenset({"scorer", "prosecutor", "defense", "voice"})
 # ---------------------------------------------------------------------------
 # Quality + court thresholds
 # ---------------------------------------------------------------------------
-QUALITY_FLOOR = 0.60  # scores are 0..1; below this a response is "unacceptable"
+# Scores are 0..1; below this a response is "unacceptable". The floor is
+# scorer-relative (a stricter scorer needs a lower floor) — calibrate it from
+# the calibration report and override per deployment.
+QUALITY_FLOOR = float(os.environ.get("DRIFT_QUALITY_FLOOR", "0.60"))
 
 WINDOW_SIZE = 80  # rows per hearing window
 MIN_SAMPLE = 30  # Defense wins automatically below this (sample_size confounder)
