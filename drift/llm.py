@@ -24,7 +24,7 @@ from typing import Protocol
 
 import httpx
 
-from drift.config import MODEL_CASTING, settings
+from drift.config import MODEL_CASTING, NO_THINK_SEATS, settings
 
 # Markers shared by prompt builders and the mock parser.
 SECTION_RE = re.compile(r"^### (\w+)\s*$", re.MULTILINE)
@@ -76,11 +76,17 @@ class LiveChatClient:
     def complete(
         self, seat: str, messages: list[dict[str, str]], temperature: float = 0.0
     ) -> str:
+        model = MODEL_CASTING[seat]
+        # Hybrid Qwen3 checkpoints think by default; the split -instruct-2507 /
+        # -thinking-2507 variants ignore the switch, so it is safe to send.
+        if seat in NO_THINK_SEATS and "qwen3" in model and "thinking" not in model:
+            messages = [*messages[:-1], {**messages[-1],
+                        "content": messages[-1]["content"] + "\n/no_think"}]
         resp = self._http.post(
             f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}"},
             json={
-                "model": MODEL_CASTING[seat],
+                "model": model,
                 "messages": messages,
                 "temperature": temperature,
             },

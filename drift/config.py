@@ -22,13 +22,19 @@ _DEFAULT_CASTING = {
     "scorer": "accounts/fireworks/models/qwen3-30b-a3b",
     "prosecutor": "accounts/fireworks/models/qwen3-30b-a3b",
     "defense": "accounts/fireworks/models/qwen3-30b-a3b",
-    "judge": "accounts/fireworks/models/qwen3-235b-a22b",
+    "judge": "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507",
     "voice": "accounts/fireworks/models/qwen3-30b-a3b",
 }
 MODEL_CASTING: dict[str, str] = {
     seat: os.environ.get(f"DRIFT_MODEL_{seat.upper()}", default)
     for seat, default in _DEFAULT_CASTING.items()
 }
+
+# Seats whose output contract is short and structured; on hybrid Qwen3 models
+# (thinking switchable per-message) these get the /no_think soft switch so the
+# high-volume seats don't pay 10-20x tokens for reasoning they don't need.
+# The judge is exempt: if cast as a thinking model, let it think.
+NO_THINK_SEATS = frozenset({"scorer", "prosecutor", "defense", "voice"})
 
 # ---------------------------------------------------------------------------
 # Quality + court thresholds
