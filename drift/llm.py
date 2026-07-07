@@ -1,0 +1,157 @@
+"""OpenAI-compatible chat client with a deterministic mock backend.
+
+Every LLM seat (scorer, prosecutor, defense, judge, voice) goes through
+`ChatClient.complete(seat, messages)`. Live mode posts to any OpenAI-compatible
+/chat/completions endpoint (Fireworks, vLLM on AMD Developer Cloud). Mock mode
+answers deterministically by parsing the *same prompts* the live models see:
+
+- scorer   -> extracts QUESTION/REFERENCE/RESPONSE sections and computes a
+              real heuristic over the text (not a ground-truth lookup)
+- pros/def -> extracts the EVIDENCE JSON block and templates an argument
+- judge    -> extracts the EVIDENCE JSON block and applies the documented
+              deterministic decision rule from drift.court.rules
+- voice    -> extracts the COUNTDOWN JSON block and phrases one sentence
+
+This keeps a single code path: prompts are built identically in both modes,
+and CI exercises the full pipeline with zero API keys.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Protocol
+
+import httpx
+
+from drift.config import MODEL_CASTING, settings
+
+# Markers shared by prompt builders and the mock parser.
+SECTION_RE = re.compile(r"^### (\w+)\s*$", re.MULTILINE)
+EVIDENCE_START = "### EVIDENCE_JSON"
+EVIDENCE_END = "### END_EVIDENCE"
+
+
+class ChatClient(Protocol):
+    def complete(
+        self, seat: str, messages: list[dict[str, str]], temperature: float = 0.0
+    ) -> str: ...
+
+
+def parse_sections(prompt: str) -> dict[str, str]:
+    """Split a prompt into its '### NAME' sections (used by mock responders)."""
+    parts = SECTION_RE.split(prompt)
+    # parts = [preamble, name1, body1, name2, body2, ...]
+    sections: dict[str, str] = {}
+    for i in range(1, len(parts) - 1, 2):
+        sections[parts[i]] = parts[i + 1].strip()
+    return sections
+
+
+def extract_json_block(prompt: str) -> dict:
+    """Extract the JSON payload between EVIDENCE markers."""
+    start = prompt.index(EVIDENCE_START) + len(EVIDENCE_START)
+    end = prompt.index(EVIDENCE_END)
+    return json.loads(prompt[start:end].strip())
+
+
+class LiveChatClient:
+    """Any OpenAI-compatible endpoint; model chosen per seat from MODEL_CASTING."""
+
+    def __init__(self, base_url: str | None = None, api_key: str | None = None) -> None:
+        cfg = settings()
+        self.base_url = (base_url or cfg.llm_base_url).rstrip("/")
+        self.api_key = api_key or cfg.llm_api_key
+        self._http = httpx.Client(timeout=120.0)
+
+    def complete(
+        self, seat: str, messages: list[dict[str, str]], temperature: float = 0.0
+    ) -> str:
+        resp = self._http.post(
+            f"{self.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": MODEL_CASTING[seat],
+                "messages": messages,
+                "temperature": temperature,
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+
+
+class MockChatClient:
+    """Deterministic stand-in that parses the real prompts. No network, no keys."""
+
+    def complete(
+        self, seat: str, messages: list[dict[str, str]], temperature: float = 0.0
+    ) -> str:
+        prompt = messages[-1]["content"]
+        if seat == "scorer":
+            return self._score(prompt)
+        if seat in ("prosecutor", "defense"):
+            return self._argue(seat, prompt)
+        if seat == "judge":
+            return self._rule(prompt)
+        if seat == "voice":
+            return self._phrase(prompt)
+        raise ValueError(f"unknown seat: {seat}")
+
+    def _score(self, prompt: str) -> str:
+        from drift.sensor.heuristic import heuristic_score
+
+        s = parse_sections(prompt)
+        score = heuristic_score(
+            question=s.get("QUESTION", ""),
+            reference=s.get("REFERENCE", ""),
+            response=s.get("RESPONSE", ""),
+        )
+        return json.dumps({"score": round(score, 4), "rationale": "heuristic (mock mode)"})
+
+    def _argue(self, seat: str, prompt: str) -> str:
+        ev = extract_json_block(prompt)
+        if seat == "prosecutor":
+            t = ev.get("trend", {})
+            return (
+                f"The quality trend over the last {t.get('n', '?')} responses is "
+                f"declining at {t.get('slope_per_hour', 0):+.4f}/hour "
+                f"(R²={t.get('r2', 0):.2f}, p={t.get('p_value', 1):.4g}). "
+                f"At this rate the stream crosses the quality floor in "
+                f"{ev.get('projected_hours_to_floor', 'N/A')} hours. "
+                "This is degradation, not noise."
+            )
+        fired = [f["name"] for f in ev.get("confounders", []) if f["fired"]]
+        if fired:
+            return (
+                "The prosecution's trend does not survive scrutiny: "
+                + "; ".join(fired)
+                + ". The apparent decline is explained without any model degradation."
+            )
+        return (
+            "No confounder in the checklist (traffic mix, outlier users, time-of-day, "
+            "scorer noise, sample size) explains the decline. The defense rests on the "
+            "residual possibility of unmodeled variance."
+        )
+
+    def _rule(self, prompt: str) -> str:
+        from drift.court.rules import deterministic_verdict
+
+        ev = extract_json_block(prompt)
+        verdict, reasoning = deterministic_verdict(ev)
+        return json.dumps({"verdict": verdict, "reasoning": reasoning})
+
+    def _phrase(self, prompt: str) -> str:
+        ev = extract_json_block(prompt)
+        lo, hi = ev.get("hours_low"), ev.get("hours_high")
+        cause = ev.get("probable_cause", "unknown cause")
+        return (
+            f"Quality crosses your floor in ~{lo}–{hi} hours at the current rate; "
+            f"probable cause: {cause}."
+        )
+
+
+def get_client(mode: str | None = None) -> ChatClient:
+    mode = (mode or settings().llm_mode).lower()
+    if mode == "live":
+        return LiveChatClient()
+    return MockChatClient()
