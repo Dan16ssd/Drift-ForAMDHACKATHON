@@ -38,6 +38,15 @@ class ChatClient(Protocol):
     ) -> str: ...
 
 
+_THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+
+def strip_think(content: str) -> str:
+    """Qwen3 models emit <think>...</think> reasoning blocks; the seats' output
+    contracts (JSON verdicts, scores, one sentence) apply to what follows."""
+    return _THINK_RE.sub("", content).strip()
+
+
 def parse_sections(prompt: str) -> dict[str, str]:
     """Split a prompt into its '### NAME' sections (used by mock responders)."""
     parts = SECTION_RE.split(prompt)
@@ -77,7 +86,8 @@ class LiveChatClient:
             },
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        content = resp.json()["choices"][0]["message"]["content"]
+        return strip_think(content)
 
 
 class MockChatClient:

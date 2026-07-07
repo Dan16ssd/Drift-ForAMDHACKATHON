@@ -14,14 +14,20 @@ from dataclasses import dataclass
 # ---------------------------------------------------------------------------
 # Model casting (spec section 8). Seat -> model id on the serving endpoint.
 # In mock mode these are labels only; in live mode they are passed as the
-# `model` field of the OpenAI-compatible request.
+# `model` field of the OpenAI-compatible request. Defaults are Fireworks
+# serverless ids; override per seat with DRIFT_MODEL_<SEAT> (e.g. a plain
+# "qwen3-30b-a3b" on a self-hosted vLLM/ROCm endpoint).
 # ---------------------------------------------------------------------------
+_DEFAULT_CASTING = {
+    "scorer": "accounts/fireworks/models/qwen3-30b-a3b",
+    "prosecutor": "accounts/fireworks/models/qwen3-30b-a3b",
+    "defense": "accounts/fireworks/models/qwen3-30b-a3b",
+    "judge": "accounts/fireworks/models/qwen3-235b-a22b",
+    "voice": "accounts/fireworks/models/qwen3-30b-a3b",
+}
 MODEL_CASTING: dict[str, str] = {
-    "scorer": "qwen3-30b-a3b",
-    "prosecutor": "qwen3-30b-a3b",
-    "defense": "qwen3-30b-a3b",
-    "judge": "qwen3-235b-a22b",
-    "voice": "qwen3-8b",
+    seat: os.environ.get(f"DRIFT_MODEL_{seat.upper()}", default)
+    for seat, default in _DEFAULT_CASTING.items()
 }
 
 # ---------------------------------------------------------------------------
