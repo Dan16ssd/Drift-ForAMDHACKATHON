@@ -433,7 +433,8 @@ export default function App() {
         </div>
       )}
 
-      {gtEvents[0] && (
+      {/* The reveal stays sealed until a prophecy exists to grade (Act 4). */}
+      {gtEvents[0] && countdownAll.length > 0 && (
         <>
           <div className="section-title">Prophecy vs ground truth</div>
           <div className="card">
