@@ -18,12 +18,15 @@ from dataclasses import dataclass
 # serverless ids; override per seat with DRIFT_MODEL_<SEAT> (e.g. a plain
 # "qwen3-30b-a3b" on a self-hosted vLLM/ROCm endpoint).
 # ---------------------------------------------------------------------------
+# Cast from the models actually served on Fireworks serverless (July 2026 —
+# the Qwen3 line was rotated out of the catalog). gpt-oss-120b is the cheap,
+# fast MoE workhorse for the high-volume seats; GLM 5.2 takes the bench.
 _DEFAULT_CASTING = {
-    "scorer": "accounts/fireworks/models/qwen3-30b-a3b",
-    "prosecutor": "accounts/fireworks/models/qwen3-30b-a3b",
-    "defense": "accounts/fireworks/models/qwen3-30b-a3b",
-    "judge": "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507",
-    "voice": "accounts/fireworks/models/qwen3-30b-a3b",
+    "scorer": "accounts/fireworks/models/gpt-oss-120b",
+    "prosecutor": "accounts/fireworks/models/gpt-oss-120b",
+    "defense": "accounts/fireworks/models/gpt-oss-120b",
+    "judge": "accounts/fireworks/models/glm-5p2",
+    "voice": "accounts/fireworks/models/gpt-oss-120b",
 }
 MODEL_CASTING: dict[str, str] = {
     seat: os.environ.get(f"DRIFT_MODEL_{seat.upper()}", default)
