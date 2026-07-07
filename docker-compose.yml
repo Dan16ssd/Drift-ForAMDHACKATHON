@@ -1,0 +1,33 @@
+# Deployment composition (AMD Developer Cloud instance). Local dev does not
+# need this — SQLite + `uvicorn drift.dashboard.server:app` is enough.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: drift
+      POSTGRES_PASSWORD: drift
+      POSTGRES_DB: drift
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drift"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://drift:drift@db:5432/drift
+      DRIFT_LLM_MODE: ${DRIFT_LLM_MODE:-mock}
+      DRIFT_LLM_BASE_URL: ${DRIFT_LLM_BASE_URL:-}
+      DRIFT_LLM_API_KEY: ${DRIFT_LLM_API_KEY:-}
+      DRIFT_WEBHOOK_URL: ${DRIFT_WEBHOOK_URL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

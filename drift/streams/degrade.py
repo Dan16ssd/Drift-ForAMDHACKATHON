@@ -142,7 +142,8 @@ def gen_calibration(n: int = 20, seed: int = 5) -> list[dict]:
 
 def write_jsonl(path: Path, records: list[Record]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
+    # newline="\n" keeps fixtures byte-identical across platforms (CI asserts this)
+    with path.open("w", encoding="utf-8", newline="\n") as f:
         for r in records:
             f.write(json.dumps(r.to_dict()) + "\n")
 
@@ -152,11 +153,11 @@ def write_all(outdir: Path, n: int = 300) -> None:
     drift_records, truth = gen_drift(n)
     write_jsonl(outdir / "drift_stream.jsonl", drift_records)
     (outdir / "drift_stream.ground_truth.json").write_text(
-        json.dumps(truth, indent=2), encoding="utf-8"
+        json.dumps(truth, indent=2), encoding="utf-8", newline="\n"
     )
     write_jsonl(outdir / "confounder_stream.jsonl", gen_confounder(n))
     cal = gen_calibration()
-    with (outdir / "calibration_set.jsonl").open("w", encoding="utf-8") as f:
+    with (outdir / "calibration_set.jsonl").open("w", encoding="utf-8", newline="\n") as f:
         for row in cal:
             f.write(json.dumps(row) + "\n")
 
@@ -182,7 +183,7 @@ def main() -> None:
         records, truth = gen_drift(args.n)
         write_jsonl(args.out, records)
         args.out.with_suffix("").with_suffix(".ground_truth.json").write_text(
-            json.dumps(truth, indent=2), encoding="utf-8"
+            json.dumps(truth, indent=2), encoding="utf-8", newline="\n"
         )
     else:
         write_jsonl(args.out, gen_confounder(args.n))

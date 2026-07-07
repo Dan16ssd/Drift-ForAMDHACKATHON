@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DRIFT_LLM_MODE: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Types
+        run: mypy drift
+      - name: Tests (incl. the three fixture verdicts)
+        run: pytest -q
+      - name: Fixture freshness — regenerating must be a no-op
+        run: |
+          python -m drift.streams.degrade --all --outdir tests/fixtures
+          git diff --exit-code tests/fixtures
+
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Build SPA
+        working-directory: dashboard
+        run: |
+          npm ci
+          npm run build

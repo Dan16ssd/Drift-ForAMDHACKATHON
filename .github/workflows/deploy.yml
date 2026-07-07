@@ -1,0 +1,32 @@
+# Deploy: image -> GHCR -> AMD Developer Cloud -> /health smoke test.
+# The GHCR build is live; the cloud rollout steps are stubbed until the
+# instance exists (TODOs below), so this workflow is manual-only for now.
+name: deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+
+      # TODO(amd-cloud): once the AMD Developer Cloud instance exists,
+      #   1. add SSH key / API token as repo secrets
+      #   2. pull ghcr image + docker compose up -d on the instance
+      #   3. smoke test:  curl -sf https://<instance>/health
+      # Until then this job only publishes the image.
