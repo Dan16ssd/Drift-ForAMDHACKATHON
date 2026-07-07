@@ -48,6 +48,7 @@ class ReplaySummary:
     countdowns: list[dict] = field(default_factory=list)
     observed_crossing_ts: str | None = None
     outcomes_backfilled: int = 0
+    errors: int = 0  # rows/hearings skipped after exhausted retries
 
     @property
     def verdicts(self) -> dict[str, int]:
@@ -69,6 +70,7 @@ class ReplaySummary:
             "countdowns": self.countdowns,
             "observed_crossing_ts": self.observed_crossing_ts,
             "outcomes_backfilled": self.outcomes_backfilled,
+            "errors": self.errors,
         }
 
 
@@ -127,7 +129,15 @@ def run_replay(
                 store.add_event(ts, stream_id, "GROUND_TRUTH", ground_truth)
                 ground_truth = None  # store once, keyed to the stream's first row
 
-            features = sense(client, record)
+            # Surveillance must survive individual failures: a row that cannot
+            # be scored after retries is skipped and counted, never fatal.
+            try:
+                features = sense(client, record)
+            except Exception as exc:  # noqa: BLE001
+                summary.errors += 1
+                if not quiet:
+                    print(f"[{ts:%H:%M}] sense failed, row skipped: {exc}")
+                continue
             store.append(ts, stream_id, features)
             summary.rows += 1
             since_hearing += 1
@@ -158,7 +168,13 @@ def run_replay(
             if summary.rows >= MIN_SAMPLE and since_hearing >= cadence and open_alert is None:
                 since_hearing = 0
                 rows = store.window(stream_id, window)
-                result = hold_hearing(store, client, stream_id, rows)
+                try:
+                    result = hold_hearing(store, client, stream_id, rows)
+                except Exception as exc:  # noqa: BLE001
+                    summary.errors += 1
+                    if not quiet:
+                        print(f"[{ts:%H:%M}] hearing failed, will re-hear: {exc}")
+                    continue
                 trend = result.evidence.get("trend") or {}
                 summary.hearings.append(
                     {

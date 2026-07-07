@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Protocol
 
 import httpx
@@ -73,6 +74,8 @@ class LiveChatClient:
         self.api_key = api_key or cfg.llm_api_key
         self._http = httpx.Client(timeout=120.0)
 
+    RETRIES = 4  # attempts on timeouts / transport errors / 429 / 5xx
+
     def complete(
         self, seat: str, messages: list[dict[str, str]], temperature: float = 0.0
     ) -> str:
@@ -82,18 +85,30 @@ class LiveChatClient:
         if seat in NO_THINK_SEATS and "qwen3" in model and "thinking" not in model:
             messages = [*messages[:-1], {**messages[-1],
                         "content": messages[-1]["content"] + "\n/no_think"}]
-        resp = self._http.post(
-            f"{self.base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-            },
-        )
-        resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-        return strip_think(content)
+        payload = {"model": model, "messages": messages, "temperature": temperature}
+        last_exc: Exception | None = None
+        for attempt in range(self.RETRIES):
+            try:
+                resp = self._http.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=payload,
+                )
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    resp.raise_for_status()
+                resp.raise_for_status()
+                content = resp.json()["choices"][0]["message"]["content"]
+                return strip_think(content)
+            except httpx.HTTPStatusError as e:
+                # Client errors other than 429 are permanent; don't retry.
+                if e.response.status_code != 429 and e.response.status_code < 500:
+                    raise
+                last_exc = e
+            except httpx.HTTPError as e:  # timeouts, transport failures
+                last_exc = e
+            time.sleep(2**attempt)  # 1s, 2s, 4s
+        assert last_exc is not None
+        raise last_exc
 
 
 class MockChatClient:
