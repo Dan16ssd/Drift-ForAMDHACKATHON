@@ -87,7 +87,14 @@ def gen_drift(
         params = SynthesisParams(quality=q, retrieval_relevance=rel)
         rec = make_record(i, stream_id, topic, params, rng, start)
         records.append(rec)
-        truth_rows.append({"idx": i, "ts": rec.ts, "retrieval_relevance": rel, "true_quality": q})
+        truth_rows.append(
+            {
+                "idx": i,
+                "ts": rec.ts,
+                "retrieval_relevance": round(rel, 6),
+                "true_quality": round(q, 6),  # rounded for cross-platform byte-identity
+            }
+        )
         if crossing_idx is None and q < QUALITY_FLOOR:
             crossing_idx = i
     truth = {

@@ -100,20 +100,25 @@ Module map: `drift/sensor` `drift/ledger` `drift/court` `drift/forecast`
 
 ## Model casting (live mode)
 
+Cast from what Fireworks serverless actually serves (verified against the
+account catalog; override any seat with `DRIFT_MODEL_<SEAT>`):
+
 | Seat | Model | Why |
 |---|---|---|
-| Quality scorer | Qwen3-30B-A3B | rubric-anchored, temp 0 — consistency over brilliance |
-| Prosecutor | Qwen3-30B-A3B | argues from statistical tool output; aggressive is safe because the Defense exists |
-| Defense | Qwen3-30B-A3B | same weight class — a fair fight |
-| Judge | Qwen3-235B-A22B | the seat where judgment failure costs money in both directions |
-| Forecaster voice | Qwen3-8B | phrases one sentence; never computes |
+| Quality scorer | gpt-oss-120b | rubric-anchored, temp 0 — a cheap fast MoE; consistency over brilliance on the seat that runs per-response |
+| Prosecutor | gpt-oss-120b | argues from statistical tool output; aggressive is safe because the Defense exists |
+| Defense | gpt-oss-120b | same weight class — a fair fight |
+| Judge | GLM 5.2 | the strongest reasoner on the bench, for the seat where judgment failure costs money in both directions; runs only on sampled windows |
+| Forecaster voice | gpt-oss-120b | phrases one sentence; never computes |
 
 **Why AMD:** scoring *every* response continuously plus two extra reasoning
 passes per suspicion is exactly the workload per-token API economics punishes —
-and flat-cost resident models on an MI300X (192 GB HBM holds scorer + full
-court simultaneously) make cheap. Adversarial verification is the feature
-incumbents can't afford to build on API economics; our moat is partly a
-hardware-cost artifact, and we say so.
+and flat-cost resident models on an MI300X (192 GB HBM holds the gpt-oss-120b
+sensor + a court-sized judge simultaneously) make cheap. Adversarial
+verification is the feature incumbents can't afford to build on API economics;
+our moat is partly a hardware-cost artifact, and we say so. Fireworks serves
+as the demo-day serving layer; the identical OpenAI-compatible pipeline points
+at vLLM/ROCm in a customer VPC.
 
 ## Wiring a real endpoint
 

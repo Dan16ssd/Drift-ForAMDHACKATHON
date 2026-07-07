@@ -277,7 +277,9 @@ def make_record(
         response=synthesize_response(topic, params, rng),
         reference=" ".join(topic.doc),
         snippets=make_snippets(topic, params, rng),
-        latency_ms=max(150.0, rng.gauss(1200.0, 200.0)),
+        # rounded: raw gauss floats differ by 1 ulp across platforms (libm),
+        # and fixtures must regenerate byte-identically on CI's Linux
+        latency_ms=round(max(150.0, rng.gauss(1200.0, 200.0)), 3),
     )
 
 
