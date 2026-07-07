@@ -72,6 +72,25 @@ class ReplaySummary:
         }
 
 
+def _load_ground_truth(path: Path) -> dict | None:
+    """A `<stream>.ground_truth.json` sidecar (written by degrade.py) carries
+    the planted schedule; when present it is stored as a GROUND_TRUTH event so
+    the dashboard can grade the prophecy against reality (demo Act 4)."""
+    sidecar = path.with_name(path.stem + ".ground_truth.json")
+    if not sidecar.exists():
+        return None
+    data = json.loads(sidecar.read_text(encoding="utf-8"))
+    return {
+        "scenario": data.get("scenario"),
+        "planted_cause": data.get("planted_cause"),
+        "quality_floor": data.get("quality_floor"),
+        "first_floor_crossing_ts": data.get("first_floor_crossing_ts"),
+        "rows": [
+            {"ts": r["ts"], "true_quality": r["true_quality"]} for r in data.get("rows", [])
+        ],
+    }
+
+
 def run_replay(
     path: Path,
     store: LedgerStore,
@@ -83,6 +102,7 @@ def run_replay(
 ) -> ReplaySummary:
     client = client or get_client()
     summary = ReplaySummary()
+    ground_truth = _load_ground_truth(path)
 
     cadence = hearing_every
     since_hearing = 0
@@ -102,6 +122,10 @@ def run_replay(
             if speed > 0 and prev_ts is not None:
                 time.sleep(max(0.0, (ts - prev_ts).total_seconds()) / speed)
             prev_ts = ts
+
+            if ground_truth is not None:
+                store.add_event(ts, stream_id, "GROUND_TRUTH", ground_truth)
+                ground_truth = None  # store once, keyed to the stream's first row
 
             features = sense(client, record)
             store.append(ts, stream_id, features)

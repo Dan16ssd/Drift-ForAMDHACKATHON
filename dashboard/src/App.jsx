@@ -32,7 +32,83 @@ const fmtTime = (iso) =>
 
 /* ---- charts (inline SVG, 2px lines, recessive grid, hover tooltip) ---- */
 
-function QualityChart({ rows, floor }) {
+/* Prophecy vs ground truth (demo Act 4): observed quality, the planted
+   schedule, the predicted crossing window, and the actual crossing. */
+function OverlayChart({ rows, truth, firstCountdown, outcomeTs, floor }) {
+  const W = 900;
+  const H = 240;
+  const pad = { l: 34, r: 10, t: 26, b: 20 };
+  const obs = rows.map((r) => ({ t: Date.parse(r.ts), q: r.features.quality }));
+  const gt = (truth.rows || []).map((r) => ({ t: Date.parse(r.ts), q: r.true_quality }));
+  if (obs.length < 2 || gt.length < 2) return null;
+
+  const t0 = Math.min(obs[0].t, gt[0].t);
+  const t1 = Math.max(obs[obs.length - 1].t, gt[gt.length - 1].t);
+  const x = (t) => pad.l + ((t - t0) / (t1 - t0)) * (W - pad.l - pad.r);
+  const y = (q) => pad.t + (1 - q) * (H - pad.t - pad.b);
+  const line = (pts) =>
+    pts.map((p, k) => `${k ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.q).toFixed(1)}`).join(" ");
+
+  const cd = firstCountdown && firstCountdown.payload && firstCountdown.payload.countdown;
+  let band = null;
+  let alertX = null;
+  if (cd) {
+    const asOf = Date.parse(cd.as_of);
+    alertX = x(asOf);
+    const lo = asOf + cd.hours_low * 3600e3;
+    const hi = asOf + (cd.hours_high != null ? cd.hours_high : cd.hours_best * 1.5) * 3600e3;
+    band = { x1: x(lo), x2: x(hi) };
+  }
+  const crossX = outcomeTs ? x(Date.parse(outcomeTs)) : null;
+
+  const sw = (color, dash) => (
+    <svg width="18" height="8" style={{ marginRight: 4 }}>
+      <line x1="0" x2="18" y1="4" y2="4" stroke={color} strokeWidth="2" strokeDasharray={dash || "none"} />
+    </svg>
+  );
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "var(--text-secondary)", marginBottom: 6 }}>
+        <span>{sw("var(--series-1)")} observed (scored)</span>
+        <span>{sw("var(--muted)", "5 4")} planted ground truth</span>
+        <span>
+          <span style={{ display: "inline-block", width: 14, height: 10, background: "var(--status-critical)", opacity: 0.18, marginRight: 4 }} />
+          predicted crossing window
+        </span>
+        <span>{sw("var(--status-critical)")} actual crossing</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Forecast vs planted ground truth">
+        {[0.2, 0.4, 0.6, 0.8, 1.0].map((g) => (
+          <g key={g}>
+            <line x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} stroke="var(--grid)" strokeWidth="1" />
+            <text x={pad.l - 6} y={y(g) + 4} textAnchor="end" fontSize="10" fill="var(--muted)">{g.toFixed(1)}</text>
+          </g>
+        ))}
+        {band && (
+          <rect x={band.x1} y={pad.t} width={Math.max(2, band.x2 - band.x1)} height={H - pad.t - pad.b} fill="var(--status-critical)" opacity="0.18" />
+        )}
+        <line x1={pad.l} x2={W - pad.r} y1={y(floor)} y2={y(floor)} stroke="var(--status-critical)" strokeWidth="1.5" strokeDasharray="6 5" />
+        <path d={line(gt)} fill="none" stroke="var(--muted)" strokeWidth="2" strokeDasharray="5 4" />
+        <path d={line(obs)} fill="none" stroke="var(--series-1)" strokeWidth="2" strokeLinejoin="round" />
+        {alertX != null && (
+          <g>
+            <line x1={alertX} x2={alertX} y1={pad.t} y2={H - pad.b} stroke="var(--status-warning)" strokeWidth="1.5" />
+            <text x={alertX + 4} y={pad.t - 6} fontSize="10" fill="var(--text-secondary)">alert raised</text>
+          </g>
+        )}
+        {crossX != null && (
+          <g>
+            <line x1={crossX} x2={crossX} y1={pad.t} y2={H - pad.b} stroke="var(--status-critical)" strokeWidth="2" />
+            <text x={crossX + 4} y={pad.t + 4} fontSize="10" fill="var(--status-critical)">actual crossing</text>
+          </g>
+        )}
+        <line x1={pad.l} x2={W - pad.r} y1={H - pad.b} y2={H - pad.b} stroke="var(--baseline)" strokeWidth="1" />
+      </svg>
+    </div>
+  );
+}
+
+function QualityChart({ rows, floor, onPick }) {
   const wrapRef = useRef(null);
   const [hover, setHover] = useState(null);
   const W = 900;
@@ -66,7 +142,13 @@ function QualityChart({ rows, floor }) {
   };
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+    <div
+      ref={wrapRef}
+      style={{ position: "relative", cursor: "pointer" }}
+      onMouseMove={onMove}
+      onMouseLeave={() => setHover(null)}
+      onClick={() => hover && onPick && onPick(hover.p.i)}
+    >
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Quality over time">
         {[0.2, 0.4, 0.6, 0.8, 1.0].map((g) => (
           <g key={g}>
@@ -223,6 +305,49 @@ function VerdictFeed({ debates, onOpen }) {
   );
 }
 
+function ResponseCard({ row, title }) {
+  if (!row) return null;
+  const f = row.features;
+  return (
+    <div className="card">
+      <div className="who" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)" }}>
+        {title} · {fmtTime(row.ts)} · quality <b style={{ color: "var(--text-primary)" }}>{f.quality.toFixed(2)}</b>
+        {row.verdict ? (
+          <>
+            {" "}
+            <span className={`badge ${row.verdict}`}>
+              <span className="dot" /> {row.verdict}
+            </span>
+          </>
+        ) : null}
+      </div>
+      <div style={{ marginTop: 6, fontWeight: 600 }}>{f.question}</div>
+      <div style={{ marginTop: 4, color: "var(--text-secondary)" }}>{f.response_excerpt}</div>
+    </div>
+  );
+}
+
+/* Demo Act 4, "the receipt": a visibly good early response beside the first
+   response any human would call bad. Rendered once a below-floor response exists. */
+function GoodVsBad({ rows, floor }) {
+  const withText = rows.filter((r) => r.features.response_excerpt);
+  if (!withText.length) return null;
+  const early = withText.slice(0, Math.min(60, withText.length));
+  const good = early.reduce((a, b) => (b.features.quality > a.features.quality ? b : a));
+  const below = withText.filter((r) => r.features.quality < floor);
+  if (!below.length) return null;
+  const bad = below.reduce((a, b) => (b.features.quality < a.features.quality ? b : a));
+  return (
+    <>
+      <div className="section-title">The receipt — same bot, hours apart</div>
+      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <ResponseCard row={good} title="before" />
+        <ResponseCard row={bad} title="after" />
+      </div>
+    </>
+  );
+}
+
 /* ---- app ---- */
 
 export default function App() {
@@ -234,6 +359,16 @@ export default function App() {
   const rows = useJson(active ? `/api/streams/${active}/window?limit=300` : null, []);
   const debates = useJson(active ? `/api/streams/${active}/debates` : null, []);
   const countdownEv = useJson(active ? `/api/streams/${active}/countdown` : null, {});
+  const gtEvents = useJson(
+    active ? `/api/streams/${active}/events?kind=GROUND_TRUTH&limit=1` : null, []
+  );
+  const countdownAll = useJson(
+    active ? `/api/streams/${active}/events?kind=COUNTDOWN&limit=50` : null, []
+  );
+  const outcomeEvents = useJson(
+    active ? `/api/streams/${active}/events?kind=OUTCOME&limit=1` : null, []
+  );
+  const [pickedIdx, setPickedIdx] = useState(null);
   const precisionRep = useJson("/api/precision", {
     alerts_total: 0,
     alerts_resolved: 0,
@@ -282,15 +417,42 @@ export default function App() {
         </>
       )}
 
-      <div className="section-title">Quality — {active || "no stream"}</div>
+      <div className="section-title">Quality — {active || "no stream"} (click a point to inspect)</div>
       <div className="grid two">
         <div className="card">
-          <QualityChart rows={rows} floor={floor} />
+          <QualityChart rows={rows} floor={floor} onPick={setPickedIdx} />
         </div>
         <div>
           <VerdictFeed debates={debates} onOpen={setOpenDebate} />
         </div>
       </div>
+
+      {pickedIdx != null && rows[pickedIdx] && (
+        <div style={{ marginTop: 10 }}>
+          <ResponseCard row={rows[pickedIdx]} title="inspected response" />
+        </div>
+      )}
+
+      {gtEvents[0] && (
+        <>
+          <div className="section-title">Prophecy vs ground truth</div>
+          <div className="card">
+            <OverlayChart
+              rows={rows}
+              truth={gtEvents[0].payload}
+              firstCountdown={countdownAll[countdownAll.length - 1]}
+              outcomeTs={
+                outcomeEvents[0] && outcomeEvents[0].payload
+                  ? outcomeEvents[0].payload.observed_crossing_ts
+                  : null
+              }
+              floor={floor}
+            />
+          </div>
+        </>
+      )}
+
+      <GoodVsBad rows={rows} floor={floor} />
 
       <div className="section-title">Sensor channels</div>
       <div className="grid sparks">

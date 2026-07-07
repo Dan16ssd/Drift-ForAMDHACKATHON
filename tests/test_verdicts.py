@@ -45,6 +45,14 @@ def test_drift_stream_convicts_and_grades_itself(tmp_path, mock_client):
     # Cause attribution names the planted cause.
     assert cd["probable_cause"] == "retrieval decay"
 
+    # The planted schedule was stored for the dashboard's prophecy-vs-reality
+    # overlay, and the confirmed outcome landed as an event.
+    gt_events = store.list_events(kind="GROUND_TRUTH", limit=5)
+    assert len(gt_events) == 1
+    assert gt_events[0]["payload"]["planted_cause"] == "retrieval decay"
+    assert gt_events[0]["payload"]["rows"]
+    assert store.list_events(kind="OUTCOME", limit=5)
+
 
 def test_stable_stream_acquits(tmp_path, mock_client):
     _, summary = replay("stable_stream.jsonl", tmp_path, mock_client)

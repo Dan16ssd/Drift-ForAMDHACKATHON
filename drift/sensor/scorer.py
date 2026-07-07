@@ -69,4 +69,8 @@ def sense(client: ChatClient, record: dict) -> dict:
     features["topic"] = record.get("topic", "")
     features["difficulty"] = record.get("difficulty", "")
     features["user_id"] = record.get("user_id", "")
+    # Text excerpts so the dashboard can show the actual exchange next to the
+    # scores (demo Acts 1 and 4: "responses visibly good" / good-vs-bad).
+    features["question"] = record.get("question", "")
+    features["response_excerpt"] = (record.get("response", "") or "")[:600]
     return features
