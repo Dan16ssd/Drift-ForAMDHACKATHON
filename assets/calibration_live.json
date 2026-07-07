@@ -1,0 +1,251 @@
+{
+  "n_items": 20,
+  "repeats": 3,
+  "mae_vs_label": 0.1975,
+  "pearson_r": 0.8464,
+  "mean_repeat_std": 0.0094,
+  "tercile_gap": 0.4889,
+  "separable": true,
+  "items": [
+    {
+      "idx": 0,
+      "topic": "password-reset",
+      "human_label": 0.1,
+      "scores": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0
+    },
+    {
+      "idx": 1,
+      "topic": "billing-refund",
+      "human_label": 0.15,
+      "scores": [
+        0.2,
+        0.0,
+        0.0
+      ],
+      "mean": 0.06666666666666667,
+      "std": 0.09428090415820634
+    },
+    {
+      "idx": 2,
+      "topic": "shipping-status",
+      "human_label": 0.2,
+      "scores": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0
+    },
+    {
+      "idx": 3,
+      "topic": "account-deletion",
+      "human_label": 0.2,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 4,
+      "topic": "api-webhooks",
+      "human_label": 0.3,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 5,
+      "topic": "sso-saml",
+      "human_label": 0.35,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 6,
+      "topic": "data-export",
+      "human_label": 0.4,
+      "scores": [
+        0.4,
+        0.2,
+        0.4
+      ],
+      "mean": 0.33333333333333337,
+      "std": 0.09428090415820634
+    },
+    {
+      "idx": 7,
+      "topic": "rate-limits",
+      "human_label": 0.4,
+      "scores": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "mean": 0.4,
+      "std": 0.0
+    },
+    {
+      "idx": 8,
+      "topic": "password-reset",
+      "human_label": 0.45,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 9,
+      "topic": "billing-refund",
+      "human_label": 0.5,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 10,
+      "topic": "shipping-status",
+      "human_label": 0.55,
+      "scores": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "mean": 0.4,
+      "std": 0.0
+    },
+    {
+      "idx": 11,
+      "topic": "account-deletion",
+      "human_label": 0.6,
+      "scores": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "mean": 0.4,
+      "std": 0.0
+    },
+    {
+      "idx": 12,
+      "topic": "api-webhooks",
+      "human_label": 0.6,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 13,
+      "topic": "sso-saml",
+      "human_label": 0.7,
+      "scores": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0
+    },
+    {
+      "idx": 14,
+      "topic": "data-export",
+      "human_label": 0.75,
+      "scores": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "mean": 0.6,
+      "std": 0.0
+    },
+    {
+      "idx": 15,
+      "topic": "rate-limits",
+      "human_label": 0.8,
+      "scores": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "mean": 0.4,
+      "std": 0.0
+    },
+    {
+      "idx": 16,
+      "topic": "password-reset",
+      "human_label": 0.85,
+      "scores": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "mean": 0.6,
+      "std": 0.0
+    },
+    {
+      "idx": 17,
+      "topic": "billing-refund",
+      "human_label": 0.8,
+      "scores": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "mean": 0.4,
+      "std": 0.0
+    },
+    {
+      "idx": 18,
+      "topic": "shipping-status",
+      "human_label": 0.9,
+      "scores": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "mean": 0.8,
+      "std": 0.0
+    },
+    {
+      "idx": 19,
+      "topic": "account-deletion",
+      "human_label": 0.95,
+      "scores": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "mean": 0.8,
+      "std": 0.0
+    }
+  ]
+}
