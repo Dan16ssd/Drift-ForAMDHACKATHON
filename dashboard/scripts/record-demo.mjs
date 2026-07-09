@@ -44,6 +44,7 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 const ctx = await browser.newContext({
   viewport: { width: 1280, height: 800 },
   recordVideo: { dir: VIDEO_DIR, size: { width: 1280, height: 800 } },
+  colorScheme: "dark", // match the dashboard's dark-first tokens + title cards
 });
 const page = await ctx.newPage();
 await page.goto(BASE, { waitUntil: "networkidle" });

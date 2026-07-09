@@ -1,0 +1,250 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DRIFT — pitch deck</title>
+<style>
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --text: #ffffff; --text2: #c3c2b7;
+    --muted: #898781; --border: rgba(255,255,255,0.12);
+    --blue: #3987e5; --aqua: #199e70; --yellow: #fab219; --red: #d03b3b; --violet: #9085e9;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #000; font-family: system-ui, "Segoe UI", sans-serif; }
+  .slide {
+    width: 1920px; height: 1080px; background: var(--page); color: var(--text);
+    padding: 90px 110px; position: relative; overflow: hidden;
+    page-break-after: always; display: flex; flex-direction: column;
+  }
+  .slide .footer {
+    position: absolute; bottom: 34px; left: 110px; right: 110px;
+    display: flex; justify-content: space-between;
+    color: var(--muted); font-size: 20px;
+  }
+  .kicker { color: var(--blue); font-size: 26px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 18px; }
+  h1 { font-size: 72px; font-weight: 750; letter-spacing: -0.01em; line-height: 1.08; }
+  h2 { font-size: 58px; font-weight: 750; letter-spacing: -0.01em; margin-bottom: 34px; line-height: 1.1; }
+  .sub { color: var(--text2); font-size: 30px; margin-top: 22px; line-height: 1.45; }
+  .big { font-size: 34px; color: var(--text2); line-height: 1.5; }
+  .accent { color: var(--blue); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px 34px; }
+  .grid { display: grid; gap: 26px; }
+  .pill { display: inline-block; border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 20px; color: var(--text2); font-size: 22px; margin-right: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 27px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 14px 20px;
+    border-bottom: 2px solid var(--border); font-size: 24px; letter-spacing: 0.04em; }
+  td { padding: 16px 20px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  td:first-child { color: var(--text); font-weight: 600; }
+  .yes { color: var(--aqua); font-weight: 700; }
+  .no { color: var(--muted); }
+  .step { display: flex; align-items: center; gap: 20px; }
+  .arrow { color: var(--muted); font-size: 34px; padding: 0 6px; }
+  .roles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 26px; }
+  .role { border-left: 6px solid; border-radius: 14px; background: var(--surface);
+    border-top: 1px solid var(--border); border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); padding: 28px 30px; }
+  .role .who { font-size: 30px; font-weight: 750; margin-bottom: 12px; }
+  .role p { color: var(--text2); font-size: 25px; line-height: 1.45; }
+  .stat { font-size: 64px; font-weight: 750; }
+  .stat-label { color: var(--muted); font-size: 24px; margin-top: 6px; }
+  .quote { border-left: 5px solid var(--blue); padding-left: 30px; font-size: 36px;
+    color: var(--text); line-height: 1.5; font-style: italic; }
+  code { font-family: Consolas, monospace; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 4px 14px;
+    font-size: 26px; color: var(--text2); }
+</style>
+</head>
+<body>
+
+<!-- 1 · TITLE -->
+<div class="slide" style="justify-content:center; align-items:center; text-align:center;">
+  <img src="../assets/logo.svg" style="width:900px; margin-bottom:50px;">
+  <div class="big" style="max-width:1250px;">
+    Watches your AI in production, puts every suspicion of degradation on
+    <span class="accent">trial</span>, and hands you a
+    <span class="accent">countdown</span> — hours before quality becomes unacceptable.
+  </div>
+  <div style="margin-top:60px;">
+    <span class="pill">AMD Developer Hackathon · July 2026</span>
+    <span class="pill">github.com/Dan16ssd/Drift-ForAMDHACKATHON</span>
+  </div>
+</div>
+
+<!-- 2 · PROBLEM -->
+<div class="slide">
+  <div class="kicker">The problem</div>
+  <h2>AI quality doesn't fail loudly. It drifts.</h2>
+  <div class="grid" style="grid-template-columns: 1.15fr 1fr; flex:1; align-items:center;">
+    <div class="big">
+      <p style="margin-bottom:28px;">A retrieval index goes quietly stale. A model update
+      shifts behavior. Every individual response still looks <i>fine</i> —
+      so thresholds stay green while quality slides for <b style="color:var(--text)">days</b>.</p>
+      <p style="margin-bottom:28px;">Your observability stack logged everything and told you nothing.
+      You find out from <b style="color:var(--red)">customers</b>.</p>
+      <p>And the tools that do alert? Teams mute them within weeks —
+      because they can't tell degradation from a traffic shift.</p>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="stat" style="color:var(--red)">3 days</div>
+        <div class="stat-label">typical silent-regression window — 10k conv/day bot → 30,000 bad customer experiences</div></div>
+      <div class="card"><div class="stat" style="color:var(--yellow)">$3–8</div>
+        <div class="stat-label">per ticket escalated to human agents, plus churn you can never attribute</div></div>
+      <div class="card"><div class="stat" style="color:var(--muted)">0</div>
+        <div class="stat-label">monitoring vendors that publish their own false-alarm rate</div></div>
+    </div>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>2</span></div>
+</div>
+
+<!-- 3 · SOLUTION -->
+<div class="slide">
+  <div class="kicker">The solution</div>
+  <h2>DRIFT — the early-warning court for AI quality</h2>
+  <div class="card" style="margin-bottom:34px;">
+    <div class="step" style="font-size:29px; font-weight:600; flex-wrap:wrap; line-height:2.1;">
+      <span>production AI stream</span><span class="arrow">→</span>
+      <span style="color:var(--aqua)">SENSOR<span style="color:var(--muted); font-weight:400;"> · scores every response</span></span><span class="arrow">→</span>
+      <span style="color:var(--text2)">LEDGER<span style="color:var(--muted); font-weight:400;"> · append-only, self-grading</span></span><span class="arrow">→</span>
+      <span style="color:var(--violet)">THE COURT<span style="color:var(--muted); font-weight:400;"> · every alarm cross-examined</span></span><span class="arrow">→</span>
+      <span style="color:var(--red)">COUNTDOWN<span style="color:var(--muted); font-weight:400;"> · hours-to-floor + cause</span></span>
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr; flex:1; align-content:start;">
+    <div class="card"><div style="font-size:29px; font-weight:700; margin-bottom:12px;">LLMs argue and explain.</div>
+      <p style="color:var(--text2); font-size:25px; line-height:1.45;">Deterministic code measures and extrapolates.
+      No model ever produces a number the system acts on — regression, changepoints, confounder stats are all scipy.</p></div>
+    <div class="card"><div style="font-size:29px; font-weight:700; margin-bottom:12px;">Uncertainty buys evidence, not silence.</div>
+      <p style="color:var(--text2); font-size:25px; line-height:1.45;">A suspicious-but-unproven trend doesn't page a human
+      and doesn't get dismissed — WATCH tightens the sampling rate until the debate can be settled.</p></div>
+    <div class="card"><div style="font-size:29px; font-weight:700; margin-bottom:12px;">The system grades itself.</div>
+      <p style="color:var(--text2); font-size:25px; line-height:1.45;">Every alert's outcome is backfilled when the predicted
+      crossing does (or doesn't) happen. Alert precision is the headline metric on the dashboard.</p></div>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>3</span></div>
+</div>
+
+<!-- 4 · THE COURT -->
+<div class="slide">
+  <div class="kicker">The differentiator</div>
+  <h2>No alert reaches a human until it survives cross-examination</h2>
+  <div class="roles" style="margin-bottom:34px;">
+    <div class="role" style="border-left-color:var(--red);">
+      <div class="who" style="color:var(--red);">Prosecutor</div>
+      <p>Argues the decline is real — armed with slope, R², p-value and a changepoint the <b>code</b> computed.</p>
+    </div>
+    <div class="role" style="border-left-color:var(--blue);">
+      <div class="who" style="color:var(--blue);">Defense</div>
+      <p>Attacks with every innocent explanation: traffic-mix shift, one outlier user, time-of-day, scorer noise, sample size.</p>
+    </div>
+    <div class="role" style="border-left-color:var(--violet);">
+      <div class="who" style="color:var(--violet);">Judge</div>
+      <p>Rules DISMISS / WATCH / ALERT on a fixed standard of proof, citing ledger rows. Judgment is auditable.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:28px; font-weight:700; margin-bottom:14px;">CI machine-checks the court's judgment on every commit</div>
+    <table>
+      <tr><th>Fixture stream</th><th>What's planted</th><th>Required verdict</th></tr>
+      <tr><td>stable</td><td>noise only</td><td class="yes">no ALERT</td></tr>
+      <tr><td>drift</td><td>retrieval decay on a known schedule</td><td style="color:var(--red); font-weight:700;">ALERT + countdown, outcome confirmed</td></tr>
+      <tr><td>confounder</td><td>traffic mix shifts to hard topics — aggregate falls, nothing broken</td><td class="yes">no ALERT — the case that defeats threshold monitors</td></tr>
+    </table>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>4</span></div>
+</div>
+
+<!-- 5 · THE COUNTDOWN -->
+<div class="slide">
+  <div class="kicker">The product moment</div>
+  <h2>A countdown, not a red dot</h2>
+  <div class="quote" style="margin-bottom:44px;">
+    "Quality crosses your floor in ~3.2–5.5 hours at the current rate;<br>
+    probable cause: <b>retrieval decay</b>."
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr; align-content:start;">
+    <div class="card"><div class="stat" style="color:var(--yellow)">hours</div>
+      <div class="stat-label">of warning before the floor — with a confidence range, from pure regression math</div></div>
+    <div class="card"><div class="stat" style="color:var(--aqua)">a cause</div>
+      <div class="stat-label">named from the sensor channel that's actually trending (retrieval, hedging, truncation…)</div></div>
+    <div class="card"><div class="stat" style="color:var(--blue)">honesty</div>
+      <div class="stat-label">when the fit is too weak, DRIFT refuses to guess — a confident number from a bad fit is theater</div></div>
+  </div>
+  <div class="card" style="margin-top:30px;">
+    <p style="font-size:27px; color:var(--text2); line-height:1.5;">Then the receipt: the predicted window is drawn over what
+    actually happened. In our planted-drift demo, <b style="color:var(--text)">the real crossing landed inside the predicted
+    window</b> — and the alert's outcome was backfilled automatically. Precision: 1/1, shown live on the dashboard.</p>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>5</span></div>
+</div>
+
+<!-- 6 · BUSINESS VALUE -->
+<div class="slide">
+  <div class="kicker">Business value</div>
+  <h2>Incumbents describe the past. DRIFT forecasts — and shows its error rate.</h2>
+  <table style="margin-bottom:36px;">
+    <tr><th></th><th>LangSmith</th><th>Arize</th><th>Braintrust</th><th style="color:var(--blue);">DRIFT</th></tr>
+    <tr><td>Logs, traces, dashboards</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td>Adversarial verification of every alarm</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ prosecutor / defense / judge</td></tr>
+    <tr><td>Time-to-unacceptable forecast</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ deterministic countdown</td></tr>
+    <tr><td>Self-reported alert precision</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ outcome backfill</td></tr>
+  </table>
+  <div class="grid" style="grid-template-columns:1fr 1fr;">
+    <div class="card"><div style="font-size:28px; font-weight:700; margin-bottom:10px;">Who pays</div>
+      <p style="font-size:26px; color:var(--text2); line-height:1.5;">Every team whose AI talks to customers — support, onboarding,
+      internal copilots. Budget already exists under "AI reliability"; silent-regression pain is hitting them for the first time.</p></div>
+    <div class="card"><div style="font-size:28px; font-weight:700; margin-bottom:10px;">The wedge</div>
+      <p style="font-size:26px; color:var(--text2); line-height:1.5;">A three-day silent regression becomes a two-hour incident
+      with a named cause. That is the difference between churn and a config rollback.</p></div>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>6</span></div>
+</div>
+
+<!-- 7 · WHY AMD -->
+<div class="slide">
+  <div class="kicker">Why AMD</div>
+  <h2>Our moat is partly a hardware-cost artifact — and we say so</h2>
+  <div class="grid" style="grid-template-columns:1.1fr 1fr; flex:1; align-items:center;">
+    <div class="big">
+      <p style="margin-bottom:26px;">Scoring <b style="color:var(--text)">every</b> response continuously, plus two extra
+      reasoning passes per suspicion, is exactly the workload
+      <b style="color:var(--text)">per-token API pricing punishes</b>.</p>
+      <p style="margin-bottom:26px;">On one MI300X, <span class="accent"><b>192&nbsp;GB HBM</b></span> holds the high-volume
+      sensing model <i>and</i> the court's judge simultaneously — flat cost, no per-token meter running against your alarm system.</p>
+      <p>Adversarial verification is the feature incumbents can't afford to build on API economics.</p>
+    </div>
+    <div class="grid">
+      <div class="card"><div style="font-size:27px; font-weight:700; margin-bottom:8px;">OpenAI-compatible by construction</div>
+        <p style="font-size:24px; color:var(--text2); line-height:1.45;">Same pipeline points at vLLM/ROCm in a customer VPC — endpoint is 3 env vars, per-seat splittable.</p></div>
+      <div class="card"><div style="font-size:27px; font-weight:700; margin-bottom:8px;">One-command onboarding</div>
+        <p style="font-size:24px; color:var(--text2);"><code>./scripts/go_live_amd.sh &lt;url&gt; &lt;key&gt;</code></p>
+        <p style="font-size:24px; color:var(--text2); margin-top:8px;">catalog probe → cast check → calibration go/no-go → live replay.</p></div>
+      <div class="card"><div style="font-size:27px; font-weight:700; margin-bottom:8px;">Concurrent sensing</div>
+        <p style="font-size:24px; color:var(--text2); line-height:1.45;">Order-preserving worker pool saturates the GPU; verdicts byte-identical to sequential.</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>7</span></div>
+</div>
+
+<!-- 8 · STATUS / CLOSE -->
+<div class="slide">
+  <div class="kicker">Built, verified, live</div>
+  <h2>Everything you saw runs today</h2>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr; margin-bottom:36px;">
+    <div class="card"><div class="stat" style="color:var(--aqua)">27</div><div class="stat-label">tests green incl. the three fixture-verdict assertions, public CI</div></div>
+    <div class="card"><div class="stat" style="color:var(--blue)">300</div><div class="stat-label">responses scored live on real models — correct verdicts, zero errors</div></div>
+    <div class="card"><div class="stat" style="color:var(--yellow)">0.846</div><div class="stat-label">scorer–label Pearson r in the live calibration spike (repeat std 0.0094)</div></div>
+    <div class="card"><div class="stat" style="color:var(--red)">1/1</div><div class="stat-label">alert precision, outcome-backfilled — graded against planted ground truth</div></div>
+  </div>
+  <div class="quote" style="margin-bottom:44px;">AI quality doesn't fail loudly. Now it doesn't have to fail silently either.</div>
+  <div>
+    <span class="pill">github.com/Dan16ssd/Drift-ForAMDHACKATHON</span>
+    <span class="pill">FastAPI · React · SQLAlchemy · SciPy · vLLM/ROCm-ready</span>
+    <span class="pill">DRIFT — verdict first, alert second</span>
+  </div>
+  <div class="footer"><span>DRIFT</span><span>8</span></div>
+</div>
+
+</body>
+</html>
