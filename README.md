@@ -1,3 +1,18 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="DRIFT — the early-warning court for AI quality" width="520">
+</p>
+
+<p align="center">
+  <a href="https://github.com/Dan16ssd/Drift-ForAMDHACKATHON/actions"><img src="https://github.com/Dan16ssd/Drift-ForAMDHACKATHON/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React%20%2B%20Vite-646CFF?logo=vite&logoColor=white" alt="React + Vite">
+  <img src="https://img.shields.io/badge/SQLAlchemy-SQLite%20%2F%20Postgres-CA4245" alt="SQLAlchemy">
+  <img src="https://img.shields.io/badge/SciPy%20%C2%B7%20ruptures-deterministic%20stats-8CAAE6?logo=scipy&logoColor=white" alt="SciPy + ruptures">
+  <img src="https://img.shields.io/badge/vLLM%20%2F%20ROCm-AMD%20MI300X%20ready-ED1C24?logo=amd&logoColor=white" alt="vLLM/ROCm on AMD">
+  <img src="https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white" alt="Docker">
+</p>
+
 # DRIFT — Early-Warning System for AI Quality Degradation
 
 ![DRIFT dashboard: countdown, verdict feed, sensor channels](assets/dashboard.png)
