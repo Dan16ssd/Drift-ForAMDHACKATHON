@@ -10,3 +10,4 @@ dashboard/dist/
 .ruff_cache/
 .pytest_cache/
 reports/
+pitching-script.md
