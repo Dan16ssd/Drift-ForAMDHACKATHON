@@ -5,6 +5,13 @@
 **Every AI observability tool tells you what your quality *was*. DRIFT tells you
 when it will become unacceptable — and whether the alarm is even real.**
 
+In plain words: DRIFT watches your AI's answers and notices when quality starts
+sliding. Before it alerts anyone, a **prosecutor** and a **defense** argue about
+whether the slide is real degradation or something innocent (a traffic shift, a
+noisy scorer, one bad user) — and a **judge** only convicts on statistical
+proof. If convicted, deterministic math — never a model — tells you **how many
+hours until quality becomes unacceptable**.
+
 DRIFT treats a production AI stream the way predictive maintenance treats a
 machine: degradation arrives on a gradient, visible long before the first
 undeniable failure. DRIFT watches the gradient, then puts every suspicion on
@@ -120,12 +127,38 @@ our moat is partly a hardware-cost artifact, and we say so. Fireworks serves
 as the demo-day serving layer; the identical OpenAI-compatible pipeline points
 at vLLM/ROCm in a customer VPC.
 
-## Wiring a real endpoint
+## Going live on any endpoint — one command
+
+`scripts/go_live_amd.sh` onboards DRIFT onto a fresh OpenAI-compatible endpoint
+(an AMD Developer Cloud vLLM/ROCm box, Fireworks, anything) in one run:
+
+```bash
+./scripts/go_live_amd.sh https://<endpoint>/v1 $API_KEY
+#  1. lists the endpoint's model catalog
+#  2. verifies every cast seat exists there (recast via DRIFT_MODEL_<SEAT>)
+#  3. runs the calibration spike — the go/no-go gate — and stops on NO-GO
+#  4. replays the planted-drift fixture live with concurrent sensing
+GO_LIVE_STEPS=check ./scripts/go_live_amd.sh ...   # catalog+cast check only
+```
+
+## Wiring a real endpoint (manual)
 
 ```bash
 export DRIFT_LLM_MODE=live
 export DRIFT_LLM_BASE_URL=https://api.fireworks.ai/inference/v1   # or your vLLM/ROCm endpoint
 export DRIFT_LLM_API_KEY=...
+```
+
+Seats can be **split across hosts**: `DRIFT_BASE_URL_<SEAT>` / `DRIFT_API_KEY_<SEAT>`
+move one seat to another endpoint (fallback: the globals above). The intended
+production shape: the per-response scorer on a flat-cost MI300X running vLLM,
+the judge wherever the strongest reasoner lives.
+
+Replays sense concurrently with `--concurrency N` (order-preserving — verdicts
+are byte-identical to a sequential run; only wall-clock changes):
+
+```bash
+python -m drift.streams.replay tests/fixtures/drift_stream.jsonl --concurrency 8
 ```
 
 **First live-mode action (the go/no-go spike):** run the scorer-variance
@@ -149,6 +182,9 @@ open end-to-end.
 
 - [x] Sensor, ledger, adversarial court, forecaster, replay — all mock-first, CI green
 - [x] Dashboard: countdown banner, debate transcripts, precision panel, sensor sparklines
-- [ ] Live Qwen endpoints on AMD Developer Cloud + real-model calibration spike
-- [ ] Recorded 4-act demo (green → whisper → verdict → graded prophecy)
+- [x] Live calibration spike PASSED on real models (repeat std 0.0094, tercile gap
+      0.489, Pearson 0.846 — `assets/calibration_live.json`) + full 300-row live
+      replay with correct verdicts and a confirmed-outcome countdown
+- [x] Recorded 4-act demo (green → whisper → verdict → graded prophecy) — `assets/demo.webm`
+- [ ] AMD Developer Cloud instance (one command when credits land: `scripts/go_live_amd.sh`)
 - [ ] Customer-discovery quotes (5 outreach messages, per the build plan)

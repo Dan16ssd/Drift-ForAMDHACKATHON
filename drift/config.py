@@ -33,6 +33,18 @@ MODEL_CASTING: dict[str, str] = {
     for seat, default in _DEFAULT_CASTING.items()
 }
 
+# Per-seat serving endpoint. Defaults to the global DRIFT_LLM_BASE_URL /
+# DRIFT_LLM_API_KEY; override a single seat to split the cast across hosts —
+# e.g. the high-volume scorer on a self-hosted vLLM/ROCm box on AMD Developer
+# Cloud while the judge stays on a serverless API:
+#   DRIFT_BASE_URL_SCORER=http://<amd-instance>:8000/v1
+#   DRIFT_API_KEY_SCORER=...
+def seat_endpoint(seat: str, default_base_url: str, default_api_key: str) -> tuple[str, str]:
+    base = os.environ.get(f"DRIFT_BASE_URL_{seat.upper()}", default_base_url)
+    key = os.environ.get(f"DRIFT_API_KEY_{seat.upper()}", default_api_key)
+    return base.rstrip("/"), key
+
+
 # Seats whose output contract is short and structured; on hybrid Qwen3 models
 # (thinking switchable per-message) these get the /no_think soft switch so the
 # high-volume seats don't pay 10-20x tokens for reasoning they don't need.

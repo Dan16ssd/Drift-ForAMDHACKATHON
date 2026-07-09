@@ -257,8 +257,28 @@ function PrecisionTiles({ report, streams, rowsSeen }) {
   );
 }
 
-function Transcript({ debate, onClose }) {
+/* The hearing as a courtroom: three role cards a first-time viewer can read
+   without knowing the internals. Jargon (regression stats, confounder names)
+   lives in chips inside the cards; the raw evidence JSON sits behind a toggle. */
+function RoleCard({ color, role, model, tagline, children }) {
+  return (
+    <div className="card role-card" style={{ borderLeft: `4px solid ${color}` }}>
+      <div className="who">
+        {role}
+        {model ? <span className="model"> · {model}</span> : null}
+      </div>
+      <div className="tagline">{tagline}</div>
+      {children}
+    </div>
+  );
+}
+
+function Transcript({ debate, casting, onClose }) {
   if (!debate) return null;
+  const trend = (debate.evidence && debate.evidence.trend) || {};
+  const fired = ((debate.evidence && debate.evidence.confounders) || []).filter(
+    (c) => c.fired
+  );
   return (
     <div className="card transcript">
       <button className="close" onClick={onClose}>
@@ -270,20 +290,60 @@ function Transcript({ debate, onClose }) {
           <span className="dot" /> {debate.verdict}
         </span>
       </h3>
-      <div className="turn">
-        <div className="who">Prosecutor (Qwen3-30B)</div>
-        <div className="said">{debate.prosecutor_argument}</div>
+      <div className="verdict-key">
+        DISMISS = innocent noise · WATCH = suspicious, sample faster · ALERT = degradation
+        proven beyond the confounders
       </div>
-      <div className="turn">
-        <div className="who">Defense (Qwen3-30B)</div>
-        <div className="said">{debate.defense_argument}</div>
-      </div>
-      <div className="turn">
-        <div className="who">Judge (Qwen3-235B)</div>
-        <div className="said">{debate.reasoning}</div>
+      <div className="grid court">
+        <RoleCard
+          color="var(--status-critical)"
+          role="Prosecutor"
+          model={casting.prosecutor}
+          tagline="argues the decline is real — every number from deterministic regression, not the model"
+        >
+          <div className="said">{debate.prosecutor_argument}</div>
+          <div className="chips">
+            {trend.slope_per_hour != null && (
+              <span className="chip">slope <b>{trend.slope_per_hour.toFixed(4)}/h</b></span>
+            )}
+            {trend.p_value != null && (
+              <span className="chip">p <b>{Number(trend.p_value).toExponential(1)}</b></span>
+            )}
+            {trend.r2 != null && <span className="chip">R² <b>{trend.r2.toFixed(2)}</b></span>}
+            {trend.n != null && <span className="chip">n <b>{trend.n}</b></span>}
+          </div>
+        </RoleCard>
+        <RoleCard
+          color="var(--series-1)"
+          role="Defense"
+          model={casting.defense}
+          tagline="argues it's innocent: traffic shift? one bad user? time of day? scorer noise? too few samples?"
+        >
+          <div className="said">{debate.defense_argument}</div>
+          {fired.length > 0 && (
+            <div className="chips">
+              {fired.map((c) => (
+                <span key={c.name} className="chip fired" title={c.detail}>
+                  {c.name.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
+          )}
+        </RoleCard>
+        <RoleCard
+          color="var(--series-5)"
+          role="Judge"
+          model={casting.judge}
+          tagline="rules on a fixed standard of proof, citing the evidence both sides argued from"
+        >
+          <div className="said">{debate.reasoning}</div>
+        </RoleCard>
       </div>
       <div className="cited">cited ledger rows: {(debate.cited_rows || []).join(", ") || "—"}</div>
-      <pre>{JSON.stringify(debate.evidence, null, 2)}</pre>
+      <details>
+        <summary>full evidence (JSON)</summary>
+        <pre>{JSON.stringify(debate.evidence, null, 2)}</pre>
+      </details>
     </div>
   );
 }
@@ -463,7 +523,11 @@ export default function App() {
         <Sparkline rows={rows} feature="latency_ms" name="latency" color="var(--series-5)" fmt={(v) => `${Math.round(v)}ms`} />
       </div>
 
-      <Transcript debate={debate} onClose={() => setOpenDebate(null)} />
+      <Transcript
+        debate={debate}
+        casting={health.model_casting || {}}
+        onClose={() => setOpenDebate(null)}
+      />
     </div>
   );
 }

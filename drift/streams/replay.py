@@ -18,6 +18,9 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from collections import deque
+from collections.abc import Iterable, Iterator
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -93,6 +96,49 @@ def _load_ground_truth(path: Path) -> dict | None:
     }
 
 
+def _read_records(path: Path) -> Iterator[dict]:
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                yield json.loads(line)
+
+
+def _sensed(
+    client: ChatClient, records: Iterable[dict], concurrency: int
+) -> Iterator[tuple[dict, dict | Exception]]:
+    """Yield (record, features-or-exception) in stream order.
+
+    Sensing one record is independent of every other, so with concurrency > 1
+    the LLM scorer calls run ahead in a bounded thread pool — order and
+    therefore every downstream verdict stay identical to the sequential run.
+    All stateful logic (ledger, hearings, cadence) remains in the consumer.
+    """
+    if concurrency <= 1:
+        for record in records:
+            try:
+                yield record, sense(client, record)
+            except Exception as exc:  # noqa: BLE001
+                yield record, exc
+        return
+
+    def task(record: dict) -> dict | Exception:
+        try:
+            return sense(client, record)
+        except Exception as exc:  # noqa: BLE001
+            return exc
+
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        pending: deque[tuple[dict, Future[dict | Exception]]] = deque()
+        for record in records:
+            pending.append((record, pool.submit(task, record)))
+            if len(pending) >= concurrency * 2:
+                head, fut = pending.popleft()
+                yield head, fut.result()
+        while pending:
+            head, fut = pending.popleft()
+            yield head, fut.result()
+
+
 def run_replay(
     path: Path,
     store: LedgerStore,
@@ -101,6 +147,7 @@ def run_replay(
     hearing_every: int = HEARING_EVERY,
     window: int = WINDOW_SIZE,
     quiet: bool = False,
+    concurrency: int = 1,
 ) -> ReplaySummary:
     client = client or get_client()
     summary = ReplaySummary()
@@ -112,99 +159,94 @@ def run_replay(
     rolling: list[float] = []
     prev_ts: datetime | None = None
 
-    with path.open(encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            ts = datetime.fromisoformat(record["ts"])
-            stream_id = record["stream_id"]
-            summary.stream_id = stream_id
+    for record, sensed in _sensed(client, _read_records(path), concurrency):
+        ts = datetime.fromisoformat(record["ts"])
+        stream_id = record["stream_id"]
+        summary.stream_id = stream_id
 
-            if speed > 0 and prev_ts is not None:
-                time.sleep(max(0.0, (ts - prev_ts).total_seconds()) / speed)
-            prev_ts = ts
+        if speed > 0 and prev_ts is not None:
+            time.sleep(max(0.0, (ts - prev_ts).total_seconds()) / speed)
+        prev_ts = ts
 
-            if ground_truth is not None:
-                store.add_event(ts, stream_id, "GROUND_TRUTH", ground_truth)
-                ground_truth = None  # store once, keyed to the stream's first row
+        if ground_truth is not None:
+            store.add_event(ts, stream_id, "GROUND_TRUTH", ground_truth)
+            ground_truth = None  # store once, keyed to the stream's first row
 
-            # Surveillance must survive individual failures: a row that cannot
-            # be scored after retries is skipped and counted, never fatal.
+        # Surveillance must survive individual failures: a row that cannot
+        # be scored after retries is skipped and counted, never fatal.
+        if isinstance(sensed, Exception):
+            summary.errors += 1
+            if not quiet:
+                print(f"[{ts:%H:%M}] sense failed, row skipped: {sensed}")
+            continue
+        features = sensed
+        store.append(ts, stream_id, features)
+        summary.rows += 1
+        since_hearing += 1
+
+        # Observed ground truth for backfill: rolling mean crosses the floor.
+        rolling.append(features["quality"])
+        if len(rolling) > ROLLING_N:
+            rolling.pop(0)
+        rolling_mean = sum(rolling) / len(rolling)
+        if (
+            summary.observed_crossing_ts is None
+            and len(rolling) == ROLLING_N
+            and rolling_mean < QUALITY_FLOOR
+        ):
+            summary.observed_crossing_ts = ts.isoformat()
+            if open_alert is not None:
+                outcome = {
+                    "confirmed": True,
+                    "observed_crossing_ts": ts.isoformat(),
+                    "detail": f"rolling mean ({ROLLING_N} rows) fell below "
+                    f"{QUALITY_FLOOR} after the alert",
+                }
+                store.backfill_debate_outcome(open_alert["debate_id"], outcome)
+                store.add_event(ts, stream_id, "OUTCOME", outcome | open_alert)
+                summary.outcomes_backfilled += 1
+                open_alert = None
+
+        if summary.rows >= MIN_SAMPLE and since_hearing >= cadence and open_alert is None:
+            since_hearing = 0
+            rows = store.window(stream_id, window)
             try:
-                features = sense(client, record)
+                result = hold_hearing(store, client, stream_id, rows)
             except Exception as exc:  # noqa: BLE001
                 summary.errors += 1
                 if not quiet:
-                    print(f"[{ts:%H:%M}] sense failed, row skipped: {exc}")
+                    print(f"[{ts:%H:%M}] hearing failed, will re-hear: {exc}")
                 continue
-            store.append(ts, stream_id, features)
-            summary.rows += 1
-            since_hearing += 1
+            trend = result.evidence.get("trend") or {}
+            summary.hearings.append(
+                {
+                    "ts": ts.isoformat(),
+                    "verdict": result.ruling.verdict,
+                    "debate_id": result.debate_id,
+                    "slope_per_hour": trend.get("slope_per_hour"),
+                    "p_value": trend.get("p_value"),
+                    "n": trend.get("n"),
+                }
+            )
+            if not quiet:
+                print(f"[{ts:%H:%M}] hearing -> {result.ruling.verdict}: "
+                      f"{result.ruling.reasoning[:100]}")
 
-            # Observed ground truth for backfill: rolling mean crosses the floor.
-            rolling.append(features["quality"])
-            if len(rolling) > ROLLING_N:
-                rolling.pop(0)
-            rolling_mean = sum(rolling) / len(rolling)
-            if (
-                summary.observed_crossing_ts is None
-                and len(rolling) == ROLLING_N
-                and rolling_mean < QUALITY_FLOOR
-            ):
-                summary.observed_crossing_ts = ts.isoformat()
-                if open_alert is not None:
-                    outcome = {
-                        "confirmed": True,
-                        "observed_crossing_ts": ts.isoformat(),
-                        "detail": f"rolling mean ({ROLLING_N} rows) fell below "
-                        f"{QUALITY_FLOOR} after the alert",
-                    }
-                    store.backfill_debate_outcome(open_alert["debate_id"], outcome)
-                    store.add_event(ts, stream_id, "OUTCOME", outcome | open_alert)
-                    summary.outcomes_backfilled += 1
-                    open_alert = None
-
-            if summary.rows >= MIN_SAMPLE and since_hearing >= cadence and open_alert is None:
-                since_hearing = 0
-                rows = store.window(stream_id, window)
-                try:
-                    result = hold_hearing(store, client, stream_id, rows)
-                except Exception as exc:  # noqa: BLE001
-                    summary.errors += 1
+            if result.ruling.verdict == "WATCH":
+                cadence = HEARING_EVERY_WATCH
+            elif result.ruling.verdict == "DISMISS":
+                cadence = hearing_every
+            elif result.ruling.verdict == "ALERT":
+                open_alert = {"debate_id": result.debate_id, "alert_ts": ts.isoformat()}
+                summary.alerts.append(dict(open_alert))
+                countdown = compute_countdown(rows, stream_id)
+                if countdown is not None:
+                    message = notify(store, client, countdown, result.debate_id)
+                    summary.countdowns.append(message["countdown"] | {
+                        "sentence": message["sentence"]
+                    })
                     if not quiet:
-                        print(f"[{ts:%H:%M}] hearing failed, will re-hear: {exc}")
-                    continue
-                trend = result.evidence.get("trend") or {}
-                summary.hearings.append(
-                    {
-                        "ts": ts.isoformat(),
-                        "verdict": result.ruling.verdict,
-                        "debate_id": result.debate_id,
-                        "slope_per_hour": trend.get("slope_per_hour"),
-                        "p_value": trend.get("p_value"),
-                        "n": trend.get("n"),
-                    }
-                )
-                if not quiet:
-                    print(f"[{ts:%H:%M}] hearing -> {result.ruling.verdict}: "
-                          f"{result.ruling.reasoning[:100]}")
-
-                if result.ruling.verdict == "WATCH":
-                    cadence = HEARING_EVERY_WATCH
-                elif result.ruling.verdict == "DISMISS":
-                    cadence = hearing_every
-                elif result.ruling.verdict == "ALERT":
-                    open_alert = {"debate_id": result.debate_id, "alert_ts": ts.isoformat()}
-                    summary.alerts.append(dict(open_alert))
-                    countdown = compute_countdown(rows, stream_id)
-                    if countdown is not None:
-                        message = notify(store, client, countdown, result.debate_id)
-                        summary.countdowns.append(message["countdown"] | {
-                            "sentence": message["sentence"]
-                        })
-                        if not quiet:
-                            print(f"          countdown: {message['sentence']}")
+                        print(f"          countdown: {message['sentence']}")
 
     return summary
 
@@ -216,12 +258,15 @@ def main() -> None:
     ap.add_argument("--speed", type=float, default=0.0,
                     help="0 = as fast as possible; N = N x real time")
     ap.add_argument("--hearing-every", type=int, default=HEARING_EVERY)
+    ap.add_argument("--concurrency", type=int, default=1,
+                    help="sensing calls in flight (order-preserving; verdicts identical)")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
     store = LedgerStore(args.db)
     summary = run_replay(
-        args.path, store, speed=args.speed, hearing_every=args.hearing_every, quiet=args.quiet
+        args.path, store, speed=args.speed, hearing_every=args.hearing_every,
+        quiet=args.quiet, concurrency=args.concurrency,
     )
     print(json.dumps(summary.to_dict(), indent=2))
 

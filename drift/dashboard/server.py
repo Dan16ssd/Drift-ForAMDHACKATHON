@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from drift.config import QUALITY_FLOOR, settings
+from drift.config import MODEL_CASTING, QUALITY_FLOOR, settings
 from drift.ledger.precision import precision_report
 from drift.ledger.store import LedgerStore
 
@@ -32,7 +32,15 @@ def store() -> LedgerStore:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "llm_mode": settings().llm_mode, "quality_floor": QUALITY_FLOOR}
+    return {
+        "status": "ok",
+        "llm_mode": settings().llm_mode,
+        "quality_floor": QUALITY_FLOOR,
+        # seat -> short model name, so the UI never hardcodes the cast
+        "model_casting": {
+            seat: model.rsplit("/", 1)[-1] for seat, model in MODEL_CASTING.items()
+        },
+    }
 
 
 @app.get("/api/streams")

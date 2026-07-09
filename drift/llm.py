@@ -25,7 +25,7 @@ from typing import Protocol
 
 import httpx
 
-from drift.config import MODEL_CASTING, NO_THINK_SEATS, settings
+from drift.config import MODEL_CASTING, NO_THINK_SEATS, seat_endpoint, settings
 
 # Markers shared by prompt builders and the mock parser.
 SECTION_RE = re.compile(r"^### (\w+)\s*$", re.MULTILINE)
@@ -66,7 +66,14 @@ def extract_json_block(prompt: str) -> dict:
 
 
 class LiveChatClient:
-    """Any OpenAI-compatible endpoint; model chosen per seat from MODEL_CASTING."""
+    """Any OpenAI-compatible endpoint; model AND endpoint chosen per seat.
+
+    MODEL_CASTING picks the model; DRIFT_BASE_URL_<SEAT>/DRIFT_API_KEY_<SEAT>
+    can move a seat to another host (fallback: the global base_url/api_key),
+    so e.g. the per-response scorer runs on a flat-cost vLLM/ROCm box while
+    the judge stays on a serverless API. httpx.Client is thread-safe, so one
+    instance serves the replay's concurrent sensing pool.
+    """
 
     def __init__(self, base_url: str | None = None, api_key: str | None = None) -> None:
         cfg = settings()
@@ -85,13 +92,14 @@ class LiveChatClient:
         if seat in NO_THINK_SEATS and "qwen3" in model and "thinking" not in model:
             messages = [*messages[:-1], {**messages[-1],
                         "content": messages[-1]["content"] + "\n/no_think"}]
+        base_url, api_key = seat_endpoint(seat, self.base_url, self.api_key)
         payload = {"model": model, "messages": messages, "temperature": temperature}
         last_exc: Exception | None = None
         for attempt in range(self.RETRIES):
             try:
                 resp = self._http.post(
-                    f"{self.base_url}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    f"{base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}"},
                     json=payload,
                 )
                 if resp.status_code == 429 or resp.status_code >= 500:
