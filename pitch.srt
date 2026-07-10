@@ -1,0 +1,247 @@
+1
+00:00:00,500 --> 00:00:03,573
+Last year, everyone shipped AI into production.
+
+2
+00:00:03,573 --> 00:00:07,169
+This year, everyone is discovering the same ugly thing.
+
+3
+00:00:07,169 --> 00:00:09,980
+AI quality doesn't fail loudly — it drifts.
+
+4
+00:00:09,980 --> 00:00:12,399
+A retrieval index goes quietly stale.
+
+5
+00:00:12,399 --> 00:00:14,491
+A model update changes behavior.
+
+6
+00:00:14,491 --> 00:00:17,826
+And nobody notices until customers do — days later.
+
+7
+00:00:17,826 --> 00:00:24,560
+Your dashboards logged all of it and told you nothing, because every single response still looked fine.
+
+8
+00:00:24,560 --> 00:00:28,155
+We built DRIFT: the early-warning court for AI quality.
+
+9
+00:00:30,055 --> 00:00:38,014
+DRIFT watches your AI's answers in production and scores every one — quality, hedging, truncation, retrieval hits, latency.
+
+10
+00:00:38,014 --> 00:00:40,860
+What you're seeing is a healthy support bot.
+
+11
+00:00:40,860 --> 00:00:42,025
+Boring on purpose.
+
+12
+00:00:42,025 --> 00:00:48,883
+But here's what makes DRIFT different from every observability tool: DRIFT never trusts its own suspicion.
+
+13
+00:00:48,883 --> 00:00:52,765
+Before anything alerts a human, the suspicion goes on trial.
+
+14
+00:00:57,055 --> 00:01:00,293
+Degradation has started — planted retrieval decay.
+
+15
+00:01:00,293 --> 00:01:04,956
+Notice: every individual response still passes any reasonable threshold.
+
+16
+00:01:04,956 --> 00:01:09,230
+This is the failure mode that kills every threshold-based monitor.
+
+17
+00:01:09,230 --> 00:01:10,849
+So DRIFT holds a hearing.
+
+18
+00:01:10,849 --> 00:01:17,261
+A prosecutor argues the decline is real — armed with regression the code computed, never the model.
+
+19
+00:01:17,261 --> 00:01:23,283
+A defense attacks with every innocent explanation: did traffic shift toward harder questions?
+
+20
+00:01:23,283 --> 00:01:24,384
+One outlier user?
+
+21
+00:01:24,384 --> 00:01:25,161
+Time of day?
+
+22
+00:01:25,161 --> 00:01:26,003
+Scorer noise?
+
+23
+00:01:26,003 --> 00:01:27,039
+Too few samples?
+
+24
+00:01:27,039 --> 00:01:30,083
+And a judge rules on a fixed standard of proof.
+
+25
+00:01:30,083 --> 00:01:30,601
+Our C.I.
+
+26
+00:01:30,601 --> 00:01:31,767
+proves this works.
+
+27
+00:01:31,767 --> 00:01:47,115
+Three fixture streams run on every commit: the court must convict planted drift, must acquit pure noise — and must acquit the hard case: a traffic-mix shift where the aggregate trend is genuinely negative, but nothing is actually broken.
+
+28
+00:01:47,115 --> 00:01:51,584
+That acquittal is a machine-checked claim, public in our Actions tab.
+
+29
+00:01:51,584 --> 00:01:56,505
+Every alert-fatigue horror story you've heard is that third case, unhandled.
+
+30
+00:01:58,055 --> 00:02:00,796
+The trend just survived cross-examination.
+
+31
+00:02:00,796 --> 00:02:05,038
+Now — and this is the product — DRIFT doesn't hand you a red dot.
+
+32
+00:02:05,038 --> 00:02:06,669
+It hands you a countdown.
+
+33
+00:02:06,669 --> 00:02:11,237
+Quality crosses your floor in three to five hours at the current rate.
+
+34
+00:02:11,237 --> 00:02:13,326
+Probable cause: retrieval decay.
+
+35
+00:02:13,326 --> 00:02:17,567
+Hours of warning, a cause to investigate, and a confidence range.
+
+36
+00:02:17,567 --> 00:02:23,245
+Pure deterministic math — a language model never produces a number this system acts on.
+
+37
+00:02:23,245 --> 00:02:27,291
+And when the fit is too weak to trust, DRIFT refuses to guess.
+
+38
+00:02:27,291 --> 00:02:28,465
+A range is honest.
+
+39
+00:02:28,465 --> 00:02:31,402
+A confident number from a bad fit is theater.
+
+40
+00:02:46,055 --> 00:02:48,195
+Every forecaster demos well once.
+
+41
+00:02:48,195 --> 00:02:50,334
+So DRIFT grades itself in public.
+
+42
+00:02:50,334 --> 00:02:58,437
+Here's the predicted crossing window laid over what actually happened — the real crossing landed inside the predicted window.
+
+43
+00:02:58,437 --> 00:03:04,661
+The alert's outcome is backfilled into the ledger, and the dashboard shows live alert precision.
+
+44
+00:03:04,661 --> 00:03:08,161
+No monitoring vendor shows you their false-alarm rate.
+
+45
+00:03:08,161 --> 00:03:10,171
+We made it the headline metric.
+
+46
+00:03:12,055 --> 00:03:13,222
+Who pays for this?
+
+47
+00:03:13,222 --> 00:03:15,490
+Anyone whose AI talks to customers.
+
+48
+00:03:15,490 --> 00:03:30,135
+A support bot doing ten thousand conversations a day that quietly degrades for three days is thirty thousand bad customer experiences — refunds, escalations to human agents at dollars per ticket, and churn you can't attribute.
+
+49
+00:03:30,135 --> 00:03:34,088
+DRIFT turns that into a two-hour incident with a named cause.
+
+50
+00:03:34,088 --> 00:03:39,466
+LangSmith, Arize, Braintrust — excellent tools that tell you what your quality was.
+
+51
+00:03:39,466 --> 00:03:44,067
+None of them forecast, and none of them cross-examine their own alarms.
+
+52
+00:03:44,067 --> 00:03:49,445
+DRIFT ships both, and self-reports its precision — a metric no incumbent publishes.
+
+53
+00:03:51,055 --> 00:03:55,862
+And this is why AMD matters — not as a sponsor logo, but as the economics.
+
+54
+00:03:55,862 --> 00:04:04,046
+Scoring every response, plus two extra reasoning passes per suspicion, is exactly the workload per-token API pricing punishes.
+
+55
+00:04:04,046 --> 00:04:10,931
+On one MI300X, 192 gigabytes of memory holds our sensing model and the judge simultaneously, at flat cost.
+
+56
+00:04:10,931 --> 00:04:16,777
+Adversarial verification is the feature incumbents can't afford to build on API economics.
+
+57
+00:04:16,777 --> 00:04:20,674
+Our moat is partly a hardware-cost artifact — and we say so.
+
+58
+00:04:20,674 --> 00:04:30,936
+Everything you saw is live: real models, one-command onboarding onto any OpenAI-compatible endpoint — including a vLLM box on AMD Developer Cloud — and a C.I.
+
+59
+00:04:30,936 --> 00:04:34,898
+tab that machine-checks the court's judgment on every commit.
+
+60
+00:04:34,898 --> 00:04:36,912
+AI quality doesn't fail loudly.
+
+61
+00:04:36,912 --> 00:04:39,770
+Now it doesn't have to fail silently either.
+
+62
+00:04:39,770 --> 00:04:42,108
+DRIFT — verdict first, alert second.

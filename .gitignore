@@ -11,3 +11,8 @@ dashboard/dist/
 .pytest_cache/
 reports/
 pitching-script.md
+.venv-tts/
+voice-sample.*
+pitch-audio/
+live_replay.err
+live_replay.log
