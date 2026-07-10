@@ -15,6 +15,10 @@
 
 # DRIFT — Early-Warning System for AI Quality Degradation
 
+**🏛️ [Live demo](https://makerbox-drift-court.hf.space/)** — the courtroom dashboard serving a fully
+replayed drift incident: hearings, the ALERT that survived cross-examination, the countdown, and the
+outcome-graded receipt. Docker image: `ghcr.io/dan16ssd/drift-foramdhackathon:latest`
+
 ![DRIFT dashboard: countdown, verdict feed, sensor channels](assets/dashboard.png)
 
 **Every AI observability tool tells you what your quality *was*. DRIFT tells you
