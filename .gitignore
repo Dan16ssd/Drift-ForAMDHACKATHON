@@ -16,3 +16,4 @@ voice-sample.*
 pitch-audio/
 live_replay.err
 live_replay.log
+deck/BUILT, VERIFIED, LIVE*.pdf
